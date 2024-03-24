@@ -2,12 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='relevant-search-results',
-    version='0.3.0',
+    version='0.0.2',
     packages=find_packages(),
     install_requires=[
         "urltotext==0.3.0",
         "llama-index==0.10.20",
         "googlesearch-python==1.2.3",
+        "readability",
+        "python-dotenv"
     ],
     # Additional metadata about your package.
     author='Chinmay Shrivastava',
