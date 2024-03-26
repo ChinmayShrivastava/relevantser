@@ -42,14 +42,24 @@ class RelevantContent:
 
     def _scrape_url(self, url: str):
         if url not in self.content:
-            self.content[url] = {
-                "text": self.cf.get_article(url).text 
-                if self.cf.get_article(url) else None,
-                "components": Components(components=[
-                    ComponentItem(elementname=elementname, elementtext=elementtext)
-                    for elementname, elementtext in self.cf.get_components(url)
-                ]) if self.cf.get_components(url) else None,
-            }
+            text = self.cf.get_article(url)
+            components = self.cf.get_components(url)
+            if text and components:
+                self.content[url] = {
+                    "text": text.text,
+                    "components": Components(components=[
+                        ComponentItem(elementname=elementname, elementtext=elementtext)
+                        for elementname, elementtext in components
+                    ])
+                }
+            # self.content[url] = {
+            #     "text": self.cf.get_article(url).text 
+            #     if self.cf.get_article(url) else None,
+            #     "components": Components(components=[
+            #         ComponentItem(elementname=elementname, elementtext=elementtext)
+            #         for elementname, elementtext in self.cf.get_components(url)
+            #     ]) if self.cf.get_components(url) else None,
+            # }
     
     def get_score(self):
         if self.urls is None:
