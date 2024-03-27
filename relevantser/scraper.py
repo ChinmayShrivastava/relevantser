@@ -60,6 +60,10 @@ class RelevantContent:
                     }
             except Exception as e:
                 print(e)
+                self.content[url] = {
+                    "text": None,
+                    "components": None
+                }
             # self.content[url] = {
             #     "text": self.cf.get_article(url).text 
             #     if self.cf.get_article(url) else None,
