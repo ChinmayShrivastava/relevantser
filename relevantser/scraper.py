@@ -3,8 +3,8 @@ from typing import List
 from llama_index.llms.openai import OpenAI
 from urltotext import ContentFinder
 
-from .searchresultsprovider import SERProvider
-from .textscore import ComponentItem, Components, TextScore
+from searchresultsprovider import SERProvider
+from textscore import ComponentItem, Components, TextScore
 
 
 class RelevantContent:
@@ -42,16 +42,24 @@ class RelevantContent:
 
     def _scrape_url(self, url: str):
         if url not in self.content:
-            text = self.cf.get_article(url)
-            components = self.cf.get_components(url)
-            if text and components:
-                self.content[url] = {
-                    "text": text.text,
-                    "components": Components(components=[
-                        ComponentItem(elementname=elementname, elementtext=elementtext)
-                        for elementname, elementtext in components
-                    ])
-                }
+            try:
+                text = self.cf.get_article(url)
+                if text:
+                    components = self.cf.get_components(url)
+                    self.content[url] = {
+                        "text": text.text,
+                        "components": Components(components=[
+                            ComponentItem(elementname=elementname, elementtext=elementtext)
+                            for elementname, elementtext in components
+                        ])
+                    }
+                else:
+                    self.content[url] = {
+                        "text": None,
+                        "components": None
+                    }
+            except Exception as e:
+                print(e)
             # self.content[url] = {
             #     "text": self.cf.get_article(url).text 
             #     if self.cf.get_article(url) else None,
@@ -67,7 +75,7 @@ class RelevantContent:
         self._scrape_urls()
         for url in self.urls:
             text = self.content[url]["text"]
-            if text is not None:
+            if text:
                 score = TextScore(
                     query=self.query, 
                     text=text, 
@@ -78,12 +86,11 @@ class RelevantContent:
             else:
                 score = None
             self.content[url]["score"] = score
+        # filter urls with no content
+        self.content = {url: content for url, content in self.content.items() if content["text"]}
         return self.content
 
 if __name__ == "__main__":
     rc = RelevantContent("What are the important topics for deep learning?")
     content = rc.get_score()
-    # print the irl and then the scores for each url
-    for url in content:
-        print(url)
-        print(content[url]["score"])
+    print(content)
