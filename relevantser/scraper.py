@@ -3,8 +3,8 @@ from typing import List
 from llama_index.llms.openai import OpenAI
 from urltotext import ContentFinder
 
-from searchresultsprovider import SERProvider
-from textscore import ComponentItem, Components, TextScore
+from .searchresultsprovider import SERProvider
+from .textscore import ComponentItem, Components, TextScore
 
 
 class RelevantContent:

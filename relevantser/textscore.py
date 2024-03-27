@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from llama_index.llms.openai import OpenAI
 from pydantic import BaseModel
 
-from prompts import COMPREHENSIVE_CHECK, RELEVANCE_CHECK
+from .prompts import COMPREHENSIVE_CHECK, RELEVANCE_CHECK
 
 load_dotenv()
 
