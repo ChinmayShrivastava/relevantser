@@ -80,21 +80,25 @@ class RelevantContent:
         for url in self.urls:
             text = self.content[url]["text"]
             if text:
-                score = TextScore(
-                    query=self.query, 
-                    text=text, 
-                    components=self.content[url]["components"],
-                    # summarizer=self.summarizer, 
-                    llm=self.llm
-                )
+                text = text.strip()
+                try:
+                    score = TextScore(
+                        query=self.query, 
+                        text=text, 
+                        components=self.content[url]["components"],
+                        # summarizer=self.summarizer, 
+                        llm=self.llm
+                    )
+                except Exception as e:
+                    score = None
             else:
                 score = None
             self.content[url]["score"] = score
         # filter urls with no content
-        self.content = {url: content for url, content in self.content.items() if content["text"]}
+        self.content = {url: content for url, content in self.content.items() if content["score"]}
         return self.content
 
 if __name__ == "__main__":
-    rc = RelevantContent("What are the important topics for deep learning?")
+    rc = RelevantContent("Deep learning for generative AI")
     content = rc.get_score()
-    print(content)
+    # print(content)
