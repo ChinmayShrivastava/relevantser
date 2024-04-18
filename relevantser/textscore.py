@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 
 import readability
@@ -10,17 +11,30 @@ from .prompts import COMPREHENSIVE_CHECK, RELEVANCE_CHECK
 load_dotenv()
 
 
-def score_type_dispatch(obj, score_type):
-    if score_type == 'FleschReadingEase':
-        return obj.redability_score('FleschReadingEase')
-    elif score_type == 'ComprehensiveScore':
-        return obj.llm_comprehensive_score()
-    elif score_type == 'RelevanceScore':
-        return obj.query_relevance_score()
-    elif score_type == 'PersonalizedScore':
-        return obj.personalized_score()
+def score_type_dispatch(obj, score_type, is_async=False):
+    if not is_async:
+        if score_type == 'FleschReadingEase':
+            return obj.redability_score('FleschReadingEase')
+        elif score_type == 'ComprehensiveScore':
+            return obj.llm_comprehensive_score()
+        elif score_type == 'RelevanceScore':
+            return obj.query_relevance_score()
+        elif score_type == 'PersonalizedScore':
+            return obj.personalized_score()
+        else:
+            raise ValueError("Invalid score type")
     else:
-        raise ValueError("Invalid score type")
+        if score_type == 'FleschReadingEase':
+            return obj.redability_score('FleschReadingEase')
+        elif score_type == 'ComprehensiveScore':
+            return obj.async_llm_comprehensive_score()
+        elif score_type == 'RelevanceScore':
+            return obj.async_query_relevance_score()
+        elif score_type == 'PersonalizedScore':
+            return obj.personalized_score()
+        else:
+            raise ValueError("Invalid score type")
+        
     
 class ComponentItem(BaseModel):
     elementname: str
@@ -47,7 +61,18 @@ class TextScore:
         # self.summarizer = summarizer
         self.summary = None
         self.llm = llm
-        self.scores = {score_type: score_type_dispatch(self, score_type) for score_type in score_types}
+        # self.scores = {score_type: score_type_dispatch(self, score_type) for score_type in score_types}
+        self.scores = {}
+
+    def calculate_scores(self):
+        for score_type in self.score_types:
+            self.scores[score_type] = score_type_dispatch(self, score_type)
+
+    async def async_calculate_scores(self):
+        tasks = []
+        for score_type in self.score_types:
+            tasks.append(asyncio.create_task(score_type_dispatch(self, score_type, is_async=True)))
+        await asyncio.gather(*tasks)
 
     def __str__(self):
         return str(self.scores)
@@ -63,6 +88,16 @@ class TextScore:
             self.summary = self.extract_headings()
         res = int(self.llm.complete(COMPREHENSIVE_CHECK.format(summary=self.summary)).text)
         return res
+    
+    async def async_llm_comprehensive_score(self):
+        # measures whether the text is comprehensive enough to answer the query and more
+        # instead of the summary, we can also just use the headings. (we can sau if headings aren't enough, then we can use the summary.)
+        if self.summary is None:
+            # self.summary = self.summarizer(self.text)
+            self.summary = self.extract_headings()
+        response = await self.llm.acomplete(COMPREHENSIVE_CHECK.format(summary=self.summary))
+        res = int(response.text)
+        return res
 
     def query_relevance_score(self):
         # measures how well the text captures the answer to the query
@@ -71,9 +106,18 @@ class TextScore:
             self.summary = self.extract_headings()
         res = int(self.llm.complete(RELEVANCE_CHECK.format(summary=self.summary, query=self.query)).text)
         return res
+    
+    async def async_query_relevance_score(self):
+        # measures how well the text captures the answer to the query
+        if self.summary is None:
+            # self.summary = self.summarizer(self.text)
+            self.summary = self.extract_headings()
+        response = await self.llm.acomplete(RELEVANCE_CHECK.format(summary=self.summary, query=self.query))
+        res = int(response.text)
+        return res
 
     def personalized_score(self):
-        # measures the text's ability to be effective to the user given their knowledge base
+        # TODO: measures the text's ability to be effective to the user given their knowledge base
         pass
 
     def extract_headings(self):

@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 
 from llama_index.llms.openai import OpenAI
@@ -40,6 +41,13 @@ class RelevantContent:
             if url not in self.content:
                 self._scrape_url(url)
 
+    async def _async_scrape_urls(self):
+        tasks = []
+        for url in self.urls:
+            if url not in self.content:
+                tasks.append(asyncio.create_task(self._async_scrape_url(url)))
+        await asyncio.gather(*tasks)
+
     def _scrape_url(self, url: str):
         if url not in self.content:
             try:
@@ -72,6 +80,31 @@ class RelevantContent:
             #         for elementname, elementtext in self.cf.get_components(url)
             #     ]) if self.cf.get_components(url) else None,
             # }
+
+    async def _async_scrape_url(self, url: str):
+        if url not in self.content:
+            try:
+                text = await self.cf.async_get_article(url)
+                if text:
+                    components = await self.cf.async_get_components(url)
+                    self.content[url] = {
+                        "text": text.text,
+                        "components": Components(components=[
+                            ComponentItem(elementname=elementname, elementtext=elementtext)
+                            for elementname, elementtext in components
+                        ])
+                    }
+                else:
+                    self.content[url] = {
+                        "text": None,
+                        "components": None
+                    }
+            except Exception as e:
+                print(e)
+                self.content[url] = {
+                    "text": None,
+                    "components": None
+                }
     
     def get_score(self):
         if self.urls is None:
@@ -89,6 +122,7 @@ class RelevantContent:
                         # summarizer=self.summarizer, 
                         llm=self.llm
                     )
+                    score.calculate_scores()
                 except Exception as e:
                     score = None
             else:
