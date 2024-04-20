@@ -5,7 +5,7 @@ setup(
     version='0.0.7',
     packages=find_packages(),
     install_requires=[
-        "urltotext>=0.3.1",
+        "urltotext",
         "llama-index==0.10.20",
         "googlesearch-python==1.2.3",
         "readability",
