@@ -25,13 +25,13 @@ def score_type_dispatch(obj, score_type, is_async=False):
             raise ValueError("Invalid score type")
     else:
         if score_type == 'FleschReadingEase':
-            return obj.redability_score('FleschReadingEase')
+            return obj.async_redability_score('FleschReadingEase')
         elif score_type == 'ComprehensiveScore':
             return obj.async_llm_comprehensive_score()
         elif score_type == 'RelevanceScore':
             return obj.async_query_relevance_score()
         elif score_type == 'PersonalizedScore':
-            return obj.personalized_score()
+            return obj.async_personalized_score()
         else:
             raise ValueError("Invalid score type")
         
@@ -73,11 +73,16 @@ class TextScore:
         for score_type in self.score_types:
             tasks.append(asyncio.create_task(score_type_dispatch(self, score_type, is_async=True)))
         await asyncio.gather(*tasks)
+        for i, score_type in enumerate(self.score_types):
+            self.scores[score_type] = tasks[i].result()
 
     def __str__(self):
         return str(self.scores)
 
     def redability_score(self, score_type):
+        return readability.getmeasures(self.text, lang='en')['readability grades'][score_type]
+    
+    async def async_redability_score(self, score_type):
         return readability.getmeasures(self.text, lang='en')['readability grades'][score_type]
     
     def llm_comprehensive_score(self):
@@ -118,6 +123,9 @@ class TextScore:
 
     def personalized_score(self):
         # TODO: measures the text's ability to be effective to the user given their knowledge base
+        pass
+
+    async def async_personalized_score(self):
         pass
 
     def extract_headings(self):

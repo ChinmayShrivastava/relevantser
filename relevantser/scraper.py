@@ -112,7 +112,7 @@ class RelevantContent:
         self._scrape_urls()
         for url in self.urls:
             text = self.content[url]["text"]
-            if text:
+            if text and len(text.strip()) > 0:
                 text = text.strip()
                 try:
                     score = TextScore(
@@ -131,7 +131,44 @@ class RelevantContent:
         # filter urls with no content
         self.content = {url: content for url, content in self.content.items() if content["score"]}
         return self.content
-
+    
+    async def async_get_score(self):
+        if self.urls is None:
+            self.add_search_urls()
+        await self._async_scrape_urls()
+        scores = []
+        for url in self.urls:
+            text = self.content[url]["text"]
+            # if text and len(text.strip()) > 0:
+            #     text = text.strip()
+            scores.append(asyncio.create_task(self._async_get_score(url, text)))
+            # else:
+            #     score = None
+        await asyncio.gather(*scores)
+        for url in self.urls:
+            self.content[url]["score"] = scores.pop(0).result()
+        # filter urls with no content
+        self.content = {url: content for url, content in self.content.items() if content["score"]}
+        return self.content
+    
+    async def _async_get_score(self, url: str, text: str):
+        if text and len(text.strip()) > 0:
+            text = text.strip()
+            try:
+                score = TextScore(
+                    query=self.query, 
+                    text=text, 
+                    components=self.content[url]["components"],
+                    # summarizer=self.summarizer, 
+                    llm=self.llm
+                )
+                await score.async_calculate_scores()
+            except Exception as e:
+                score = None
+        else:
+            score = None
+        return score
+    
 if __name__ == "__main__":
     rc = RelevantContent("Deep learning for generative AI")
     content = rc.get_score()
